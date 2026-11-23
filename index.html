@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#2a2230">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%F0%9F%90%A7%3C/text%3E%3C/svg%3E">
+<title>Maxfiy muzey</title>
+<style>
+  :root {
+    --ink: #3b2a22;
+    --cream: #fbf6ea;
+    --gold: #c9a24a;
+    --rose: #d9607f;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden; background: #2a2230;
+    font-family: Georgia, "Times New Roman", serif; color: var(--cream);
+    overscroll-behavior: none; -webkit-user-select: none; user-select: none;
+    -webkit-touch-callout: none;
+  }
+  .hidden { display: none !important; }
+  #gl { position: fixed; inset: 0; width: 100%; height: 100%; display: none; touch-action: none; outline: none; }
+  body.running #gl { display: block; }
+
+  /* ---------- Kirish ekrani ---------- */
+  #lock {
+    position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+    background:
+      radial-gradient(1200px 700px at 20% 10%, rgba(217,96,127,.35), transparent 60%),
+      radial-gradient(900px 600px at 90% 90%, rgba(201,162,74,.28), transparent 60%),
+      linear-gradient(160deg, #3a2a47, #1f1829);
+  }
+  .card {
+    width: min(92vw, 380px); text-align: center; padding: 34px 28px 28px;
+    background: rgba(251,246,234,.96); color: var(--ink); border-radius: 22px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.45);
+    border: 2px solid rgba(201,162,74,.6);
+  }
+  .card .pen { font-size: 64px; line-height: 1; animation: bob 2.4s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-8px) rotate(3deg); } }
+  .card h1 { margin: 12px 0 4px; font-size: 26px; font-weight: 600; }
+  .card p { margin: 0 0 18px; font-size: 15px; color: #6b574c; font-style: italic; }
+  .card input {
+    width: 100%; padding: 13px 14px; font-size: 17px; border-radius: 12px; border: 2px solid #d9c9a8;
+    background: #fff; color: var(--ink); text-align: center; outline: none;
+    font-family: system-ui, sans-serif; -webkit-user-select: text; user-select: text;
+  }
+  .card input:focus { border-color: var(--rose); }
+  .card button {
+    margin-top: 12px; width: 100%; padding: 13px; font-size: 17px; border: 0; border-radius: 12px;
+    background: var(--rose); color: #fff; cursor: pointer; font-family: inherit; letter-spacing: .3px;
+  }
+  .card button:active { transform: scale(.98); }
+  #lock-msg { min-height: 20px; margin-top: 12px; font-size: 14px; font-style: normal; font-family: system-ui, sans-serif; color: #6b574c; }
+  #lock-msg.err { color: #b3263e; }
+  .spinner {
+    width: 38px; height: 38px; border-radius: 50%; border: 4px solid rgba(0,0,0,.12); border-top-color: var(--rose);
+    margin: 18px auto 6px; animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---------- HUD ---------- */
+  .hud { position: fixed; z-index: 10; display: none; }
+  body.running .hud { display: block; }
+  .chip {
+    padding: 8px 14px; border-radius: 999px; font-size: 15px; background: rgba(30,22,38,.62); color: #fff;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border: 1px solid rgba(255,255,255,.18);
+  }
+  #room-label { top: calc(12px + env(safe-area-inset-top)); left: calc(12px + env(safe-area-inset-left)); pointer-events: none; }
+  #room-label::before { content: "📍 "; }
+  #demo-badge { top: calc(98px + env(safe-area-inset-top)); left: calc(12px + env(safe-area-inset-left)); font-size: 13px; background: rgba(217,96,127,.85); pointer-events: none; }
+  #loading { top: calc(54px + env(safe-area-inset-top)); left: calc(12px + env(safe-area-inset-left)); pointer-events: none; font-size: 13px; white-space: nowrap; }
+  #loading::before {
+    content: ""; display: inline-block; width: 11px; height: 11px; margin-right: 8px; vertical-align: -1px;
+    border-radius: 50%; border: 2px solid rgba(255,255,255,.35); border-top-color: #fff; animation: spin .8s linear infinite;
+  }
+
+  #side { top: calc(12px + env(safe-area-inset-top)); right: calc(12px + env(safe-area-inset-right)); display: none; flex-direction: column; align-items: flex-end; gap: 8px; }
+  body.running #side { display: flex; }
+  #map-wrap { padding: 5px; border-radius: 12px; background: rgba(30,22,38,.55); border: 1px solid rgba(255,255,255,.18); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); pointer-events: none; }
+  #map { display: block; border-radius: 8px; }
+  .round {
+    width: 42px; height: 42px; border-radius: 50%; border: 1px solid rgba(255,255,255,.22); color: #fff; font-size: 19px;
+    background: rgba(30,22,38,.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); cursor: pointer; line-height: 1;
+    display: flex; align-items: center; justify-content: center; font-family: system-ui, sans-serif;
+  }
+  .round:active { background: rgba(217,96,127,.8); }
+  #btn-row { display: flex; gap: 8px; }
+
+  #joy {
+    left: calc(22px + env(safe-area-inset-left)); bottom: calc(26px + env(safe-area-inset-bottom));
+    width: 136px; height: 136px; border-radius: 50%; touch-action: none;
+    background: radial-gradient(circle at 50% 50%, rgba(255,255,255,.10), rgba(255,255,255,.22));
+    border: 2px solid rgba(255,255,255,.45); box-shadow: 0 6px 24px rgba(0,0,0,.35), inset 0 0 20px rgba(255,255,255,.12);
+    backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+  }
+  #joy::before, #joy::after { content: ""; position: absolute; background: rgba(255,255,255,.22); }
+  #joy::before { left: 50%; top: 14px; bottom: 14px; width: 2px; margin-left: -1px; }
+  #joy::after { top: 50%; left: 14px; right: 14px; height: 2px; margin-top: -1px; }
+  #joy-knob {
+    position: absolute; left: 50%; top: 50%; width: 60px; height: 60px; margin: -30px 0 0 -30px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #fff, #f2d7df 60%, #e7aebf); box-shadow: 0 4px 12px rgba(0,0,0,.4);
+    pointer-events: none;
+  }
+
+  #actions { right: calc(18px + env(safe-area-inset-right)); bottom: calc(26px + env(safe-area-inset-bottom)); display: none; flex-direction: column; align-items: flex-end; gap: 12px; }
+  body.running #actions { display: flex; }
+  #btn-view {
+    max-width: min(62vw, 320px); padding: 12px 18px; border-radius: 999px; border: 0; cursor: pointer;
+    background: var(--rose); color: #fff; font-size: 16px; font-family: inherit; box-shadow: 0 6px 20px rgba(0,0,0,.35);
+    display: flex; align-items: center; gap: 8px;
+  }
+  #btn-view::before { content: "🖼️"; }
+  #view-cap { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #btn-view:active { transform: scale(.97); }
+
+  #hint {
+    left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(88vw, 420px); padding: 20px 22px;
+    background: rgba(30,22,38,.82); border: 1px solid rgba(255,255,255,.22); border-radius: 18px; font-size: 15px; line-height: 1.5;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); text-align: left; z-index: 20;
+  }
+  #hint h2 { margin: 0 0 8px; font-size: 20px; font-weight: 600; }
+  #hint ul { margin: 0; padding-left: 20px; }
+  #hint small { display: block; margin-top: 10px; opacity: .7; font-family: system-ui, sans-serif; font-size: 12px; }
+
+  /* ---------- Rasm ko'rish (lightbox) ---------- */
+  #lb { position: fixed; inset: 0; z-index: 40; background: rgba(14,10,20,.94); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px; }
+  #lb-stage { position: relative; display: flex; align-items: center; justify-content: center; max-width: 100%; }
+  #lb-img {
+    max-width: min(94vw, 1400px); max-height: 74vh; background: #fff; padding: 10px; border-radius: 4px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.6); transition: opacity .25s; touch-action: manipulation;
+  }
+  #lb-img.dim { opacity: .15; }
+  #lb-spin { position: absolute; }
+  #lb-cap { margin-top: 18px; font-size: 22px; text-align: center; max-width: 90vw; }
+  #lb-sub { margin-top: 4px; font-size: 14px; opacity: .65; font-family: system-ui, sans-serif; }
+  #lb-close, #lb-prev, #lb-next {
+    position: absolute; border: 0; color: #fff; background: rgba(255,255,255,.14); cursor: pointer; border-radius: 50%;
+    width: 46px; height: 46px; font-size: 22px; font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center;
+  }
+  #lb-close { top: calc(14px + env(safe-area-inset-top)); right: calc(14px + env(safe-area-inset-right)); }
+  #lb-prev { left: 12px; top: 50%; margin-top: -23px; }
+  #lb-next { right: 12px; top: 50%; margin-top: -23px; }
+  #lb-close:active, #lb-prev:active, #lb-next:active { background: rgba(217,96,127,.8); }
+
+  @media (max-width: 560px) {
+    #lb-prev, #lb-next { top: auto; bottom: 22px; margin: 0; }
+    #lb-prev { left: calc(50% - 64px); } #lb-next { right: calc(50% - 64px); }
+    #lb-cap { font-size: 19px; }
+  }
+  @media (max-height: 500px) {
+    #joy { width: 112px; height: 112px; }
+    #joy-knob { width: 50px; height: 50px; margin: -25px 0 0 -25px; }
+    #lb-img { max-height: 62vh; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="gl" tabindex="0"></canvas>
+
+<!-- Kirish -->
+<div id="lock">
+  <div class="card">
+    <div class="pen">🐧</div>
+    <h1>Maxfiy muzey</h1>
+    <div id="lock-busy"><div class="spinner"></div><p>Ochilmoqda…</p></div>
+    <form id="lock-form" class="hidden" autocomplete="off">
+      <p>Kirish uchun parolni kiriting</p>
+      <input id="lock-pass" type="password" placeholder="Parol" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <button type="submit">Kirish</button>
+    </form>
+    <div id="lock-msg"></div>
+  </div>
+</div>
+
+<!-- HUD -->
+<div id="room-label" class="hud chip">Asosiy zal</div>
+<div id="demo-badge" class="hud chip hidden">Namuna (demo)</div>
+<div id="loading" class="hud chip hidden">Yuklanmoqda…</div>
+
+<div id="side" class="hud">
+  <div id="map-wrap"><canvas id="map"></canvas></div>
+  <div id="btn-row">
+    <button id="btn-help" class="round" title="Yordam" aria-label="Yordam">?</button>
+    <button id="btn-fs" class="round hidden" title="To'liq ekran" aria-label="To'liq ekran">⛶</button>
+  </div>
+</div>
+
+<div id="joy" class="hud" aria-label="Joystik"><div id="joy-knob"></div></div>
+
+<div id="actions" class="hud">
+  <button id="btn-view" class="hidden"><span id="view-cap">Rasmni ko'rish</span></button>
+  <button id="btn-cam" class="round" title="Kamerani pingvin orqasiga qaytarish" aria-label="Kamera">🎥</button>
+</div>
+
+<div id="hint" class="hud">
+  <h2>🐧 Pingvinni boshqaring</h2>
+  <ul>
+    <li>Yurish: chapdagi <b>joystik</b> yoki <b>W A S D</b> / strelkalar</li>
+    <li>Kamerani burash: ekranni <b>suring</b> (yoki Q / R)</li>
+    <li>Rasm oldiga boring: pushti tugma chiqadi, uni bosing (yoki bo'sh joy). Rasmning o'ziga bosish ham mumkin</li>
+    <li>Pingvinga bossangiz, sakraydi 🙂</li>
+  </ul>
+  <small>Yopish uchun bosing</small>
+</div>
+
+<!-- Rasm ko'rish -->
+<div id="lb" class="hidden">
+  <button id="lb-close" aria-label="Yopish">✕</button>
+  <div id="lb-stage">
+    <button id="lb-prev" aria-label="Oldingi">‹</button>
+    <img id="lb-img" alt="">
+    <div id="lb-spin" class="spinner hidden"></div>
+    <button id="lb-next" aria-label="Keyingi">›</button>
+  </div>
+  <div id="lb-cap"></div>
+  <div id="lb-sub"></div>
+</div>
+
+<noscript><p style="padding:24px;position:fixed;inset:0;z-index:99;background:#2a2230">Muzeyni ko'rish uchun JavaScript yoqilgan bo'lishi kerak.</p></noscript>
+
+<script src="core.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
